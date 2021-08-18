@@ -1,9 +1,11 @@
 from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import NotFound, MethodNotAllowed, ParseError
+from rest_framework.exceptions import NotFound, MethodNotAllowed
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from .permissions import *
-from .serializers import *
+from .permissions import IsPassed
+from .serializers import InterviewSerializer, AnswerSerializer, QuestionSerializer, InterviewUpdatePassedSerializer, \
+    StaffInterviewSerializer, VariantsAnswerSerializer, PassedInterviewSerializer
 from rest_framework import generics
+from .models import VariantsAnswer, Answer, Question, Interview
 
 
 # список всех опросов
@@ -12,15 +14,16 @@ class Home(generics.ListAPIView):
     queryset = Interview.objects.filter(is_active=True)
 
 
-# первый вопрос опроса и писать коммент
+# посмотреть первый вопрос опроса и сделать ответ
 class InterviewQuestionFirst(generics.RetrieveAPIView, generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return AnswerSerializer
         return QuestionSerializer
-
+    
+    # если пользователь не ответил на предыдущий вопрос то нельзя посмотреть на этот
     def get_object(self):
         interview = get_object_or_404(Interview, pk=self.kwargs['pk'])
         que = get_object_or_404(Question, interview=interview, is_first=True)
@@ -31,6 +34,7 @@ class InterviewQuestionFirst(generics.RetrieveAPIView, generics.CreateAPIView):
                 return que
             raise NotFound()
 
+    # и если не ответит на прошлый вопрос то ответить на этот нельзя
     def perform_create(self, serializer):
         user = self.request.user
         interview = Interview.objects.filter(pk=self.kwargs['pk'])
@@ -46,7 +50,7 @@ class InterviewQuestionFirst(generics.RetrieveAPIView, generics.CreateAPIView):
 
 # Смотреть вопрос и делать коммент
 class InterviewQuestion(generics.RetrieveAPIView, generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -65,7 +69,8 @@ class InterviewQuestion(generics.RetrieveAPIView, generics.CreateAPIView):
                 return qu
         raise NotFound()
 
-    # если пользователь отвечат на вопрос то опять ответить нельзя
+    # если пользователь отвечал на вопрос то опять ответить нельзя
+    # и если не ответит на прошлый вопрос то ответить на этот нельзя
     def perform_create(self, serializer):
         user = self.request.user
         que = Question.objects.filter(pk=self.kwargs['pk'], is_first=False)
@@ -84,7 +89,7 @@ class InterviewQuestion(generics.RetrieveAPIView, generics.CreateAPIView):
 
 # добавляем пользователя в пройденные
 class InterviewPassed(generics.RetrieveAPIView):
-    permission_classes = [IsAuthenticated, IsPassed]
+    permission_classes = (IsAuthenticated, IsPassed)
     serializer_class = InterviewUpdatePassedSerializer
 
     def get_object(self):
@@ -96,7 +101,7 @@ class InterviewPassed(generics.RetrieveAPIView):
 
 # активируем опрос (для админа)
 class ActivateInterview(generics.RetrieveAPIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
     serializer_class = InterviewSerializer
 
     def get_object(self):
@@ -110,7 +115,7 @@ class ActivateInterview(generics.RetrieveAPIView):
 class StaffHome(generics.ListCreateAPIView):
     serializer_class = StaffInterviewSerializer
     queryset = Interview.objects.all()
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
 
     def perform_create(self, serializer):
         serializer.save(is_active=False)
@@ -120,37 +125,37 @@ class StaffHome(generics.ListCreateAPIView):
 class StaffInterviewDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = StaffInterviewSerializer
     queryset = Interview
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
 
 
 # создать вопрос
 class StaffQuestionsCreate(generics.CreateAPIView):
     serializer_class = QuestionSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
 
 
 # редактировать вопрос
 class QuestionsRetrieve(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = QuestionSerializer
     queryset = Question
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
 
 
 # создать вариант ответа
 class AnswerVariantsCreate(generics.CreateAPIView):
     serializer_class = VariantsAnswerSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
 
 
 # редактировать вариант ответа
 class AnswerVariantsRetrieve(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = VariantsAnswerSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = (IsAdminUser,)
 
 
 # пройденные опросы
 class PassedQuiz(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
     serializer_class = PassedInterviewSerializer
 
     def get_queryset(self):
