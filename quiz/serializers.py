@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import *
+from .models import VariantsAnswer, Answer, Question, Interview
 
 
 class VariantsAnswerSerializer(serializers.ModelSerializer):
@@ -33,12 +33,6 @@ class InterviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Interview
         exclude = ('passed', )
-
-
-class UserSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = '__all__'
 
 
 class InterviewUpdatePassedSerializer(serializers.ModelSerializer):
